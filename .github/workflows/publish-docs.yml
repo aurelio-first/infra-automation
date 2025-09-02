@@ -1,53 +1,42 @@
-name: Publicar Documentação e Scripts
+name: Publicar Documentação na Wiki
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'docs/**'
+
+permissions:
+  contents: write
 
 jobs:
-  validate-docs:
-    name: Validar Documentações
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout do Código
-        uses: actions/checkout@v3
-
-      - name: Validar se há documentos
-        run: |
-          if ! ls docs/*.md 1> /dev/null 2>&1; then
-            echo "Nenhum documento encontrado!"; exit 1;
-          fi
-
-  validate-scripts:
-    name: Validar Scripts
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout do Código
-        uses: actions/checkout@v3
-
-      - name: Validar Scripts PowerShell
-        run: |
-          for script in scripts/*.ps1; do
-            pwsh -NoLogo -NoProfile -Command "Get-Command $script" || exit 1
-          done
-
-      - name: Validar Scripts Bash
-        run: |
-          for script in scripts/*.sh; do
-            bash -n $script || exit 1
-          done
-
   publish-wiki:
-    name: Publicar na Wiki do GitHub
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout do Código
-        uses: actions/checkout@v3
-
-      - name: Publicar Wiki
-        uses: docker://decathlon/wiki-page-creator-action:latest
+      # 1. Faz checkout do repositório principal
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
         with:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO_NAME: ${{ github.repository }}
-          GH_WIKI_FOLDER: docs
+          fetch-depth: 0
+
+      # 2. Clona o repositório da Wiki
+      - name: Clonar Wiki
+        run: |
+          git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.wiki.git wiki
+
+      # 3. Copia os arquivos de documentação para a Wiki
+      - name: Copiar Documentação
+        run: |
+          mkdir -p wiki
+          cp -r docs/* wiki/
+
+      # 4. Commit e push na Wiki
+      - name: Publicar na Wiki
+        run: |
+          cd wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Atualização automática da Wiki [skip ci]" || echo "Nada para atualizar"
+          git push origin main

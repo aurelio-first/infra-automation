@@ -1,0 +1,53 @@
+name: Publicar Documentação e Scripts
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate-docs:
+    name: Validar Documentações
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v3
+
+      - name: Validar se há documentos
+        run: |
+          if ! ls docs/*.md 1> /dev/null 2>&1; then
+            echo "Nenhum documento encontrado!"; exit 1;
+          fi
+
+  validate-scripts:
+    name: Validar Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v3
+
+      - name: Validar Scripts PowerShell
+        run: |
+          for script in scripts/*.ps1; do
+            pwsh -NoLogo -NoProfile -Command "Get-Command $script" || exit 1
+          done
+
+      - name: Validar Scripts Bash
+        run: |
+          for script in scripts/*.sh; do
+            bash -n $script || exit 1
+          done
+
+  publish-wiki:
+    name: Publicar na Wiki do GitHub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v3
+
+      - name: Publicar Wiki
+        uses: docker://decathlon/wiki-page-creator-action:latest
+        with:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO_NAME: ${{ github.repository }}
+          GH_WIKI_FOLDER: docs

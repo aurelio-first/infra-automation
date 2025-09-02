@@ -1,0 +1,27 @@
+name: Atualizar Wiki
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checar código
+        uses: actions/checkout@v3
+
+      - name: Configurar Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Clonar Wiki
+        run: |
+          git clone https://github.com/aurelio-first/infra-automation.wiki.git wiki
+          cd wiki
+          cp -r ../docs/* . || echo "Nenhuma atualização encontrada"
+          git add .
+          git commit -m "Atualização automática da Wiki [skip ci]" || echo "Nada para atualizar"
+          git push origin master
